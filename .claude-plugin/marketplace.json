@@ -1,0 +1,22 @@
+{
+  "name": "yuyang-plugins",
+  "owner": {
+    "name": "yuyangp123",
+    "email": "p.yuyang@outlook.com"
+  },
+  "description": "Personal Claude Code / Cowork plugins.",
+  "plugins": [
+    {
+      "name": "sports-watchlist",
+      "source": "./sports-watchlist",
+      "description": "Updates the user's Sports Watchlist Calendar: verifies each followed team/player's next fixture against authoritative official sources and writes precise-time, peacock-blue (colorId 7) viewing events into Google Calendar, with no popup reminders and a training-conflict check.",
+      "version": "1.0.0",
+      "author": {
+        "name": "yuyangp123",
+        "email": "p.yuyang@outlook.com"
+      },
+      "category": "productivity",
+      "tags": ["calendar", "sports", "scheduling"]
+    }
+  ]
+}
