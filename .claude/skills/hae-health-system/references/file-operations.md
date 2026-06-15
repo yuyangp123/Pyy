@@ -39,16 +39,18 @@ HAE App(Health Auto Export)按指标分多个自动化,自动导出到 Google Dr
 ## 数据怎么进 Claude(核心限制 + 突破口)
 
 - Drive 文件以 **base64 进上下文,不落容器磁盘**;要解析必须先誊进容器。
-- 誊写**只对小文件可靠**(几千字符内)。分段 JSON 34KB → 约 45K base64 字符 → 誊不准
-  (base64 无容错)。
-- ⭐ **突破口 1(CSV)**:`list_recent_files` 的 `contentSnippet` 返回的是**已解码、可读的 CSV 文本**
+- ⭐ **CSV 突破口**:`list_recent_files` 的 `contentSnippet` 返回的是**已解码、可读的 CSV 文本**
   (不是 base64)→ 落盘直接解析,完全绕开 base64。逐分钟数据就是这么拿到的。
-- `download_file_content(exportMimeType='text/csv')` 能把 Sheet 导成 CSV,但仍返回 base64(还得誊)。
-- ⭐⭐ **突破口 2(JSON,2026-06-12 打通)**:读 HAE/HRV JSON 的正道 =
-  `download_file_content(fileId)` → 取 `content`(base64)→ 誊进 bash heredoc →
-  `base64 -d | python3` 解析。HRV Export JSON 9.4KB(~13K base64 字符)誊写+解码 **成功**;
-  34KB 分段睡眠 JSON(~45K)仍太大誊不准。即 **≤~10KB 的 JSON 现在能读了**
-  (active energy / basal / HRV / workouts 都在 JSON 里)。
+  (`download_file_content(exportMimeType='text/csv')` 能把 Sheet 导成 CSV,但仍返回 base64。)
+- ⭐⭐ **JSON 正道 — `create_file` 写 `.b64`(2026-06-15 定稿)**:
+  `download_file_content(fileId)` → 取 `content`(base64)→ **`create_file` 把 base64 写成 `.b64` 文件**
+  (单参数、无 shell 层,比 bash heredoc 稳 —— heredoc 对大 base64 会被 shell 转义损坏)→
+  `base64 -d > xxx.json` → Python 解析。已证 **14.7KB JSON / ~20K base64 一次成功**;上限至少 ~15KB
+  (34KB 那档尚未实测)。⚠️ `create_file` 路径须是**新文件**(已存在会失败 → 先 rm 或换名)。
+  active energy / basal / HRV / 睡眠 / workouts 全在 JSON 里。
+- ⭐ **完整版优先 · 不按时间降级(用户要求)**:不管什么时间跑,都拉当前**最全**的那份导出、
+  **读完整 JSON、全量分析**,不再为大文件退回 CSV snippet。清晨导出(~07:27)天然还没有全天能量
+  (白天还没发生)→ 标「待全天导出补」,但**报告范围不缩减、能拿的指标全算**。**不做「晨间精简版」。**
 - ⭐ **历史数据高效取法 = grep transcripts**:Diet Tracker 等在容器 `/mnt/transcripts/` 里生成 →
   过去每天吃什么、体重、能量,grep transcripts 比逐个解析 Drive 文件快得多。
   索引:`/mnt/transcripts/journal.txt`。
@@ -63,7 +65,9 @@ HAE App(Health Auto Export)按指标分多个自动化,自动导出到 Google Dr
   **这就是精确阶段总量的来源**(校验:Core+Deep+REM ≈ Total)。解析逐分钟 HR 时跳过此行;
   要阶段总量时专取此行。
   ⚠️ 睡眠总量永远用此聚合行(精确),**别用刚醒导出的 JSON 聚合值**(低估,曾误报 5.35h vs 实际 6.69h)。
-  静息 HR 不在此行 → 从睡眠 HR 谷底估或从 JSON 取。
+- ⚠️ **静息 HR(RHR)取法**:不在聚合行。**清晨导出(~07:27)的 JSON 里也没有 `resting_heart_rate` 字段**
+  (Apple 清晨计算有滞后)→ 晨报 RHR **只能从整夜 HR 谷底推**(例 6/15:谷底 ~40–41 → RHR ~42);
+  只有含全天的**晚间导出**才有现成 RHR 字段。
 - 其余行 = **逐分钟样本,稀疏**:不同指标在不同分钟上报,多数字段为空。
   Apple 睡眠时 HR 机会性采样(每几分钟;约 5s 仅 workout 模式),呼吸更稀。
 - ⚠️ snippet 会**压掉空字段** → 列位置不可信 → 改用**数值启发式**判列(见下)。
@@ -83,14 +87,17 @@ HAE App(Health Auto Export)按指标分多个自动化,自动导出到 Google Dr
 - 路径:`HRV Export/` 文件夹;文件名 `HealthAutoExport-YYYY-MM-DD.json`(~9KB)。
 - 结构:`data.metrics[]` 里 name=`heart_rate_variability`、units=`ms`、`data[]` 每条 =
   `{date, start, end, qty}`,qty = **SDNN(ms)**,逐时采样(夜间约 30–35 点)。
-- 取法:`download_file_content` → base64 → `base64 -d | python3` 提 `(date[11:16], qty)`。
+- 取法:`download_file_content` → `create_file` 写 `.b64` → `base64 -d | python3` 提 `(date[11:16], qty)`。
 - ⭐ 清洗:剔 **>2× 中位** 的伪迹(6/12 夜中位 69.8 → 剔 3 个 >140ms:06:11=172、06:41=155、06:56=149);
   对比个人基线 **65–85**。
 - 产出:逐时 SDNN 序列 → 喂 artifact,和 HR **同一时间轴** plot。
 
-## 当前文件 ID(示例,会变,仅供格式参考)
+## 当前文件(命名规律,每日新)
 
-- HealthMetrics(Sheet,逐分钟,2026-06-11)`1X3LB9We76FfFSToKCZlZ-Xx-EfS8mqyFWW1OwFEtNzc`
-- 分段睡眠 JSON(34KB,搬不动,Sleep 文件夹)`11-EzDZ3ZyUM3KhvyI4hPE8VhaUDmRsLR`
+- 逐分钟 HealthMetrics(Sheet)= `Health Metrics/` 下当日 `HealthMetrics-YYYY-MM-DD`。
+- 完整 JSON = `Health Metrics/` 或 `HM JSON/` 下当日 `HealthAutoExport-YYYY-MM-DD.json`。
+  - **晚间导出**:含全天能量 + RHR 字段。
+  - **晨间导出(~07:27)**:只有整夜睡眠 / HRV / HR / 呼吸(无全天能量、无 RHR 字段)。
+  - 两者都用 `create_file` 法整份读。
 - Diet Tracker 文件名格式:`饮食记录 Diet Tracker [YYYY-MM-DD HH:MM]`(CSV;
   三段:Food Log 每餐+宏量 / Targets / Daily Summary;含晨重实测 + 当日 deficit)。

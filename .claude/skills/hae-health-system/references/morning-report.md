@@ -11,14 +11,17 @@
   ⭐ HRV 取法 = `download_file_content` HRV Export JSON → base64 解码 → SDNN 逐时(剔 >2×中位伪迹),
   和 HR **同一时间轴** plot 进睡眠图,**不再标缺**。详见 `file-operations.md`。
 - **能量侧** — Diet Tracker:摄入 / 体重;训练:CNS 负荷(网球 / 力量 / 联赛 / 休息)。见 `weight-energy.md`。
+  ⚠️ **活动量永远以 Workouts / HAE active 实测为准,别信日历事件标题**
+  (6/14 教训:日历写「休息日」实际打两场球 → 差点把缺口算错 −1500)。
 - **主观侧** — 30 秒自评:疲劳 / 心情 / 压力 / 动力 各 1–5。研究(Saw/Main/Gastin 2016)证**主观敏感度 > 客观**
   → 喂 UPCSE 认知+压力两项,置信度最高的锚。
-- 取数法:`list_recent_files` 枚举、contentSnippet 读 CSV、历史数据 grep transcripts(见 `file-operations.md`)。
+- 取数法:`list_recent_files` 枚举、`contentSnippet` 读 CSV、**`create_file` 法读完整 JSON**、
+  历史数据 grep transcripts(见 `file-operations.md`)。
 
 ## 报告结构(整合版 artifact)
 
 顶层 **tab 切换**两块完整内容:
-- **😴 睡眠 / 恢复** — 单夜 hypnogram + 心率/呼吸自主神经曲线(SVG,= `assets/sleep-epoch.jsx` 那版)。
+- **😴 睡眠 / 恢复** — 单夜 hypnogram + 心率 / HRV / 呼吸自主神经曲线(SVG,= `assets/sleep-epoch.jsx` 那版)。
 - **🔥 热量 / 体重** — 周/月/年三视图 + 摄入vs消耗 / 净值 switcher + 营养审计(recharts,= `assets/fatloss-engine.jsx`)。
 
 整合视角(可贯穿在顶层或睡眠侧):
@@ -48,6 +51,12 @@
 
 - **整合 = 两个完整 artifact 原样拼接 + 顶层 tab,绝不擅自简化。**
   犯过一次:自作主张做精简版被退回 → 以后整合**只拼不删**。
+- ⭐ **完整版优先 · 不按时间降级**:不管什么时间跑,都给**完整版最新数据分析**(读完整 JSON、全量);
+  清晨没有的全天能量标「待补」但范围不缩,**不做晨间精简版**。详见 `file-operations.md`。
+- ⭐ **重建法(splice,2026-06-15 固化)**:在**前一天的 artifact** 上改 —— 换 Tab2 睡眠块 + Tab1 UPCSE 块,
+  Tab3 周 / 分解 / 年数组续期 + 横幅更新;`@babel` 校验语法 + 交叉核对色板 key
+  (`Cs/Cu/Cw` 引用都得有定义)。比从零重写省 token。
+- ⭐ **活动量核实**:能量侧活动量永远以 Workouts / HAE active 实测为准,别信日历事件标题(6/14 教训)。
 - 拼接做法:两边顶层命名先避冲突(睡眠 `STAGES/SEG/HR…` vs 热量 `C/G/WEEK…`)→
   剥各自 import 合并到顶部、把两个 `export default` 降级成普通函数、外面包一个 tab wrapper。**零改动两个本体。**
 - recharts 图元必须**独立直接子级,不包 Fragment**(否则线/柱不渲染)。
@@ -55,9 +64,10 @@
 - 设计:移动端单列 ~480、绿/琥珀/红、每块一句结论、禁 localStorage。
 
 ## 模板文件
-- `body-integrated-*.jsx` = `sleep-epoch`(`assets/sleep-epoch.jsx`)+ `fatloss-engine-v3`
+- 最新 = `body-integrated-YYYY-MM-DD.jsx` = `sleep-epoch`(`assets/sleep-epoch.jsx`)+ `fatloss-engine`
   (`assets/fatloss-engine.jsx`)顶层 tab 拼接。
-- 每天用最新数据重生成;睡眠组件可换(`sleep-fused` / `sleep-unified`)只改渲染那一行。
+- **每天用最新数据 splice 重生成**(在前一天文件上改,见上「重建法」);
+  睡眠组件可换(`sleep-fused` / `sleep-unified`)只改渲染那一行。
 
 ---
 *这份报告是整个 HAE 系统的日常出口:睡眠子页 + 减脂子页 的数据管线在这里汇成一张图。*

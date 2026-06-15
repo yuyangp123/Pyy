@@ -18,7 +18,9 @@ Apple Health / Apple Watch 数据 → Google Drive → 解析 → 判断 → 可
 > **任何单一数据源都会骗人** —— HAE 聚合导出会**低估**(刚醒导出 Apple 没定稿);
 > 截图(=Apple Watch)会**高估**(漏报清醒);设备会把"安静仰卧清醒"误判成睡眠。
 > **解法 = 多源 + 自主神经(HR/HRV/呼吸)交叉验证**;HR/HRV 是"清醒 vs 睡眠"的生理裁判。
-> 配套纪律:**别目测先算;n=1 非因果;跨午夜务必确认日期;缺数据标灰不编。**
+> 配套纪律:**别目测先算;n=1 非因果;跨午夜务必确认日期;缺数据标灰不编;
+> 完整版优先、不按时间降级(任何时间跑都读完整 JSON 全量分析,不做晨间精简版);
+> 活动量以 Workouts/HAE active 实测为准,别信日历事件标题。**
 
 ## 何时用哪个模块(决策树)
 
@@ -36,13 +38,16 @@ Apple Health / Apple Watch 数据 → Google Drive → 解析 → 判断 → 可
 ## 端到端主流程(晨报默认路径)
 
 1. **取数** — `list_recent_files`(orderBy=modifiedTime desc)枚举 Drive;`contentSnippet` 直接给已解码 CSV;
-   JSON 用 `download_file_content` → base64 → `base64 -d | python3`。历史数据 `grep /mnt/transcripts/`。
-   详见 `file-operations.md`。
+   **完整 JSON 用 `create_file` 写 `.b64` → `base64 -d > x.json` → python3**(取代 bash heredoc)。
+   历史数据 `grep /mnt/transcripts/`。**完整版优先,不退回 snippet。** 详见 `file-operations.md`。
 2. **解析** — HealthMetrics CSV:首行(00:00:00)= 当夜睡眠阶段聚合(精确总量);其余行逐分钟样本,
    用数值启发式分列(HR 35–110、呼吸 12–26)。HRV Export JSON → SDNN 逐时(剔 >2×中位伪迹)。
+   RHR:晨间导出 JSON 无 RHR 字段 → 从整夜 HR 谷底推。
 3. **分模块判断** — 睡眠(多源融合)/ 能量(当日结算 + 脂肪vs水)/ 训练负荷。每模块都做自主神经交叉验证。
+   ⚠️ 活动量以 Workouts/HAE active 实测为准,别信日历标题。
 4. **(可选)状态融合** — UPCSE:5 潜变量 → 5 分数(恢复/压力/睡眠/就绪/认知),贝叶斯精度加权。
 5. **渲染 artifact** — 两个完整 artifact **原样拼接 + 顶层 tab**(绝不擅自简化);recharts 图元必须独立直接子级。
+   **splice 重建**:在前一天 `body-integrated-*.jsx` 上改(换睡眠块+UPCSE块、续期数组),`@babel` 校验 + 色板 key 核对。
 6. **收口** — 每块一句话结论 + 行动;deficit 报区间下端、体重预测报上端,**永不单点**。
 
 ## 关键常量速查(全系统统一,细节见各 reference)
