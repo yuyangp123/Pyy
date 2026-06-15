@@ -1,6 +1,17 @@
 # Pyy
 # Portfolio Optimization with Python and xlwings
 
+## 项目结构
+
+```
+.
+├── README.md              本说明
+├── src/                   Python 代码
+│   └── portfolio_optimizer.py   OR-Tools(CP-SAT) + xlwings + tkinter 优化器
+├── docs/                  研究/设计笔记（按版本、日期归档的 Markdown）
+└── .claude/skills/        项目专用 Claude Code 技能（见其中 README）
+```
+
 ## Overview
 
 This solution provides a comprehensive Python implementation using **xlwings** and **SciPy** to optimize your portfolio by maximizing the sum of adjusted eligible collateral values while respecting concentration limits and bound constraints. The system integrates seamlessly with your existing Excel workbook structure.
