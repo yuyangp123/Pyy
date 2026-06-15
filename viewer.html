@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Artifact Viewer</title>
+<!-- 通用 JSX artifact 查看器。代码公开;你选的数据文件只在浏览器本地读取,绝不上传。 -->
+<style>
+  :root { color-scheme: light; }
+  html,body{ margin:0; background:#faf9f7; -webkit-text-size-adjust:100%;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif; }
+  #bar{ position:sticky; top:0; z-index:50; display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+    padding:10px 12px; background:#1c1917; color:#fff; }
+  #bar b{ font-size:14px; }
+  #bar small{ color:#a8a29e; font-size:11px; }
+  .btn{ background:#fff; color:#1c1917; border:none; border-radius:9px; padding:8px 12px;
+    font-size:13px; font-weight:700; cursor:pointer; }
+  #drop{ margin:14px 12px; padding:26px 16px; border:2px dashed #d6d3d1; border-radius:14px;
+    text-align:center; color:#78716c; background:#fff; }
+  #err{ display:none; margin:14px 12px; padding:12px 14px; border-radius:12px;
+    background:#fef2f2; border:1px solid #fecaca; color:#991b1b; font-size:12px; white-space:pre-wrap;
+    font-family:ui-monospace,Menlo,monospace; }
+  #root{ min-height:40vh; }
+  input[type=file]{ display:none; }
+</style>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/prop-types@15/prop-types.min.js"></script>
+<script crossorigin src="https://unpkg.com/recharts@2.12.7/umd/Recharts.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+<div id="bar">
+  <b>Artifact Viewer</b>
+  <label class="btn" for="file">📂 选 .jsx 文件</label>
+  <input id="file" type="file" accept=".jsx,.js,.txt" />
+  <button class="btn" id="paste">📋 粘贴代码</button>
+  <small id="status">数据只在本机读取 · 不上传</small>
+</div>
+
+<div id="drop">把当天的 <b>body-integrated-YYYY-MM-DD.jsx</b> 选进来 → 本地编译渲染。<br/>(也支持 sleep-epoch / fatloss-engine 等单组件)</div>
+<div id="err"></div>
+<div id="root"></div>
+
+<script>
+// ---- lucide-react 占位 shim:任何图标名 → 简单 SVG,保留布局,不依赖额外包 ----
+const LucideShim = new Proxy({}, { get: () => (props={}) => {
+  const s = props.size || 16;
+  return React.createElement('svg', { width:s, height:s, viewBox:'0 0 24 24', fill:'none',
+    stroke:'currentColor', strokeWidth:2, strokeLinecap:'round', strokeLinejoin:'round', style:props.style, className:props.className },
+    React.createElement('circle', { cx:12, cy:12, r:9 }));
+}});
+
+// ---- require 解析:把 import 的包名映射到已加载的全局 ----
+const MODULES = {
+  'react': React,
+  'react-dom': ReactDOM,
+  'react-dom/client': ReactDOM,
+  'recharts': Recharts,
+  'lucide-react': LucideShim,
+};
+function shimRequire(name){
+  if (name in MODULES) return MODULES[name];
+  throw new Error('未知依赖: ' + name + ' (viewer 仅内置 react / recharts / lucide-react)');
+}
+
+const errEl = document.getElementById('err');
+const statusEl = document.getElementById('status');
+function showErr(msg){ errEl.style.display='block'; errEl.textContent = String(msg); }
+function clearErr(){ errEl.style.display='none'; errEl.textContent=''; }
+
+function renderSource(code, label){
+  clearErr();
+  try {
+    // import/export → commonjs;JSX → React.createElement
+    const out = Babel.transform(code, {
+      presets: [ ['env', { modules: 'commonjs' }], 'react' ],
+      filename: 'artifact.jsx',
+    }).code;
+
+    const module = { exports: {} };
+    const exports = module.exports;
+    // 经典 JSX pragma 需要 React 在作用域;named import 走 require
+    const fn = new Function('require','module','exports','React','ReactDOM','Recharts', out);
+    fn(shimRequire, module, exports, React, ReactDOM, Recharts);
+
+    const Comp = module.exports.default || module.exports;
+    if (typeof Comp !== 'function') throw new Error('没找到 export default 的 React 组件');
+
+    document.getElementById('drop').style.display = 'none';
+    ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(Comp));
+    statusEl.textContent = label ? ('已渲染:' + label) : '已渲染';
+    document.title = label || 'Artifact';
+  } catch (e) {
+    showErr('渲染失败:\n' + (e && e.stack || e));
+  }
+}
+
+document.getElementById('file').addEventListener('change', (ev) => {
+  const f = ev.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => renderSource(r.result, f.name);
+  r.readAsText(f);
+});
+
+document.getElementById('paste').addEventListener('click', () => {
+  const code = prompt('粘贴 artifact 的 JSX 代码:');
+  if (code) renderSource(code, '粘贴的代码');
+});
+</script>
+</body>
+</html>
