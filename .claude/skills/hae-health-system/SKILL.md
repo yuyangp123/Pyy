@@ -10,6 +10,9 @@ description: >-
 
 # HAE 健康数据系统
 
+> 更新日志:**2026-06-16** 实时重构 —— 报告改 3 tab(现在状态/睡眠/热量)、UPCSE 加 §9 五通道、
+> 母版统一为 `assets/body-integrated-master.jsx`。 · 2026-06-15 create_file `.b64` 读 JSON + 完整版优先。
+
 Apple Health / Apple Watch 数据 → Google Drive → 解析 → 判断 → 可视化 的全流程。
 本系统的日常出口 = **实时整合报告(3 tab:现在状态 / 睡眠 / 热量)**;其下有 4 个可独立调用的分析模块。
 (已无「纯晨间报告」——任何时间跑都是实时状态报告,以 ⚡现在状态 为首。)
