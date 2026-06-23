@@ -11,6 +11,17 @@ function useIsDark() {
   }, []);
   return d;
 }
+
+function useWindowWidth() {
+  const [w, setW] = useState(typeof window !== "undefined" ? window.innerWidth : 1024);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const h = () => setW(window.innerWidth);
+    window.addEventListener("resize", h);
+    return () => window.removeEventListener("resize", h);
+  }, []);
+  return w;
+}
 import {
   ComposedChart, Line, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip,
   ReferenceLine, ReferenceArea, ReferenceDot, ResponsiveContainer,
@@ -91,7 +102,7 @@ function SleepVF() {
   return (
     <div style={{ background: Cs.bg, minHeight: "100vh", padding: "20px 14px 40px", color: Cs.ink,
       fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif",
-      maxWidth: 760, margin: "0 auto" }}>
+      maxWidth: "100%", margin: "0 auto" }}>
 
       <div style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: 1.4, color: Cs.hrv, textTransform: "uppercase" }}>
         🌙 睡眠 VF · Apple Watch + 自主神经仲裁
@@ -385,7 +396,7 @@ function WeightEngine() {
 
   return (
     <div style={{ background: Cw.bg, minHeight: "100vh", padding: "18px 13px 40px", color: Cw.ink,
-      fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif", maxWidth: 480, margin: "0 auto" }}>
+      fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif", maxWidth: "100%", margin: "0 auto" }}>
 
       <div style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: 1.3, color: Cw.sub, textTransform: "uppercase" }}>体重引擎 · 脂肪 vs 水 × 能量 × 目标</div>
       <h1 style={{ fontSize: 19, fontWeight: 800, lineHeight: 1.32, margin: "7px 0 4px" }}>
@@ -768,7 +779,7 @@ function Realtime() {
   const nowX = dx0 + (167 / 168) * (dx1 - dx0);
   return (
     <div style={{ background: Cr.bg, minHeight: "100vh", padding: "20px 13px 38px", color: Cr.ink,
-      fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif", maxWidth: 480, margin: "0 auto" }}>
+      fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif", maxWidth: "100%", margin: "0 auto" }}>
 
       <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.4, color: Cr.ctl, textTransform: "uppercase" }}>UPCSE · 现在状态 · §2 分数 + §9 多通道</div>
       <h1 style={{ fontSize: 19, fontWeight: 800, margin: "5px 0 2px" }}>现在状态 · 6/23 周二 · 晨</h1>
@@ -925,6 +936,9 @@ function Realtime() {
 function IntegratedReport() {
   const [tab, setTab] = useState("rt");
   const isDark = useIsDark();
+  const vw = useWindowWidth();
+  const isDesktop = vw >= 768;
+  const shellMax = vw < 600 ? "100%" : vw < 1200 ? 720 : 820;
   Cs = mkCs(isDark); Cu = mkCu(isDark); Cw = mkCw(isDark); Cr = mkCr(isDark);
   const W = isDark ? {
     bg:"#1c1c1e", grad:"linear-gradient(135deg,#2a2a2c 0%,#1c1c1e 100%)", bd:"#3a3a3c",
@@ -943,7 +957,11 @@ function IntegratedReport() {
     { k: "energy", emoji: "🔥", label: "热量/体重" },
   ];
   return (
-    <div style={{ maxWidth: 480, margin: "0 auto", background: W.bg,
+    <div style={{ background: W.bg, minHeight: "100vh", width: "100%" }}>
+    <div style={{ maxWidth: shellMax, margin: "0 auto", background: W.bg, minHeight: "100vh",
+      boxShadow: isDesktop ? "0 0 40px rgba(0,0,0,0.18)" : "none",
+      borderLeft: isDesktop ? `1px solid ${W.bd}` : "none",
+      borderRight: isDesktop ? `1px solid ${W.bd}` : "none",
       fontFamily: "-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif" }}>
 
       <div style={{ padding: "15px 16px 13px", background: W.grad, color: W.ink,
@@ -989,6 +1007,7 @@ function IntegratedReport() {
         {tab === "sleep"  && <SleepVF />}
         {tab === "energy" && <WeightEngine />}
       </div>
+    </div>
     </div>
   );
 }
