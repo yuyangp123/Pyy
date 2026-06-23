@@ -1,4 +1,4 @@
-# 实时整合健康报告 (Health Dashboard)
+# HAE · 实时整合健康报告 (Health Auto Export Dashboard)
 
 A single-page React dashboard that fuses Apple Watch / Health Auto Export data into one
 mobile-first, dark/light-aware report. Built as a Claude artifact and wired up here as a
@@ -28,7 +28,7 @@ runnable Vite app.
 ## 运行
 
 ```bash
-cd health-dashboard
+cd hae
 npm install
 npm run dev      # 本地开发
 npm run build    # 产出 dist/
