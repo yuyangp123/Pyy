@@ -413,7 +413,7 @@ function WeightEngine() {
           return (
             <button key={k} onClick={() => setTab(k)}
               style={{ flex: 1, padding: "8px 0", borderRadius: 9, fontSize: 12, fontWeight: 700, cursor: "pointer",
-                border: `1.5px solid ${on ? Cw.ink : Cw.line}`, background: on ? Cw.ink : Cw.card, color: on ? "#fff" : Cw.sub, lineHeight: 1.2 }}>
+                border: `1.5px solid ${on ? Cw.ink : Cw.line}`, background: on ? Cw.ink : Cw.card, color: on ? Cw.bg : Cw.sub, lineHeight: 1.2 }}>
               {lab}
             </button>
           );
