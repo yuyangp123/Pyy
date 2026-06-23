@@ -935,6 +935,7 @@ function Realtime() {
 
 function IntegratedReport() {
   const [tab, setTab] = useState("rt");
+  const [copied, setCopied] = useState(false);
   const isDark = useIsDark();
   const vw = useWindowWidth();
   const isDesktop = vw >= 768;
@@ -956,6 +957,29 @@ function IntegratedReport() {
     { k: "sleep",  emoji: "😴", label: "睡眠/恢复" },
     { k: "energy", emoji: "🔥", label: "热量/体重" },
   ];
+
+  /* 🔄 刷新数据:把一段自包含的刷新指令复制到剪贴板,并打开 Claude Code 网页(claude.ai/code)。
+     Claude Code 会话同时连着你的 GitHub 仓库 + Google Drive —— 粘贴指令后它能一路:
+     读 Drive 最新数据 → 重算下面的常量 → 提交到 main 触发自动部署。
+     不在静态页里塞任何 token / service account —— 权限来自你登录的 Claude 账号本身。 */
+  const refreshPrompt =
+    "刷新我的 HAE 健康 dashboard(GitHub 仓库 yuyangp123/Pyy)。" +
+    "请用你连接的 Google Drive,读取最新的「饮食记录 Diet Tracker」「Workouts」「HealthMetrics」「HealthAutoExport(HRV / RHR)」," +
+    "理解今天与昨天的数据,重算 health-dashboard/src/IntegratedReport.jsx 顶部的数据常量(NUTRI 营养、S/SEG/HRV/HRD 睡眠、恢复与训练)," +
+    "保持三个 tab「现在状态 / 睡眠恢复 / 热量体重」全局一致、同一时间戳。" +
+    "能直接提交就提交到 main 分支(可经 PR)触发自动部署;不能就把重算后的常量代码块发给我,我贴回去。";
+  const openRefresh = () => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(refreshPrompt).catch(() => {});
+      }
+    } catch (e) { /* clipboard 不可用时无伤大雅,下面照样打开 Claude Code */ }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2600);
+    // 直接打开 Claude Code 网页(连着仓库 + Drive);指令已在剪贴板,粘贴即可发送
+    window.open("https://claude.ai/code", "_blank", "noopener");
+  };
+
   return (
     <div style={{ background: W.bg, minHeight: "100vh", width: "100%" }}>
     <div style={{ maxWidth: shellMax, margin: "0 auto", background: W.bg, minHeight: "100vh",
@@ -981,6 +1005,14 @@ function IntegratedReport() {
           borderTop: `1px dashed ${W.dash}`, paddingTop: 6 }}>
           ⓘ 面板更新到 6/23 晨：<b style={{ color: W.band }}>睡眠</b>=6/22夜→6/23晨(上床晚00:30·总时长短5.94h·深睡0.73低·HRV中位75·清晨冲102-117·RHR46连两天回落) · <b style={{ color: W.band }}>热量</b>=休息日·早餐已47g蛋白·体重80.1(近2周平) · <b style={{ color: W.band }}>现在状态</b>=§2 疲劳已退(RHR46·ATL衰减~575·昨练腿DOMS峰值落明天6/24的121)
         </div>
+        <button onClick={openRefresh}
+          style={{ marginTop: 9, display: "inline-flex", alignItems: "center", gap: 6,
+            padding: "6px 11px", fontSize: 11, fontWeight: 700, color: W.good, background: W.goodBg,
+            border: `1px solid ${W.good}66`, borderRadius: 8, cursor: "pointer", fontFamily: "inherit", lineHeight: 1.3 }}
+          title="复制刷新指令并打开 Claude Code 网页(连着仓库 + 你的 Google Drive)。粘贴指令后它会:读 Drive 最新数据 → 重算面板 → 提交 main 自动部署。静态页不存任何 token。">
+          🔄 {copied ? "已复制 · 正在打开 Claude Code…" : "刷新数据"}
+          {!copied && <span style={{ fontWeight: 600, color: W.sub }}> · 打开 Claude Code,粘贴即重算 → 部署</span>}
+        </button>
       </div>
 
       <div style={{ display: "flex", gap: 6, padding: "10px 12px",
